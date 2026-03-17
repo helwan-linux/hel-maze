@@ -3,7 +3,7 @@
 
 pkgname=hel-maze
 pkgver=1.0
-pkgrel=1
+pkgrel=2
 pkgdesc="لعبة متاهة تعليمية رسمية لتوزيعة Helwan Linux"
 arch=('x86_64')
 url="https://github.com/helwan-linux/hel-maze"
