@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Helwan Maze (SMA)
+Comment=Professional Maze Game by سعيد بدر الدين
+Exec=/path/to/your/compiled/maze_pro  # <-- غير المسار ده لمكان ملفك الشغال
+Icon=helwan-maze  # <-- ده اسم ملف الأيقونة اللي لسه ناقلينه
+Categories=Game;Arcade;
+Terminal=false
