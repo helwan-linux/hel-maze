@@ -106,21 +106,35 @@ static gboolean on_draw(GtkWidget *widget, cairo_t *cr, gpointer data) {
 static gboolean on_key_press(GtkWidget *widget, GdkEventKey *event, gpointer data) {
     GameState *gs = (GameState *)data;
     if (gs->status != STATE_PLAYING) return FALSE;
+
     int nx = gs->px, ny = gs->py;
     switch (event->keyval) {
-        case GDK_KEY_Up: ny--; break;
-        case GDK_KEY_Down: ny++; break;
-        case GDK_KEY_Left: nx--; break;
+        case GDK_KEY_Up:    ny--; break;
+        case GDK_KEY_Down:  ny++; break;
+        case GDK_KEY_Left:  nx--; break;
         case GDK_KEY_Right: nx++; break;
     }
+
+    // التأكد إن التحرك مش داخل حيطة (رقم 1)
     if (gs->maze[ny][nx] != 1) {
+        
+        // --- إضافة ميزة الـ Time Bonus هنا ---
         if (gs->maze[ny][nx] == 3) {
-            gs->score += 10;
-            gs->maze[ny][nx] = 0;
-            update_ui_label(gs);
+            gs->score += 10;      // زيادة السكور
+            gs->time_left += 10;  // 🔥 إضافة 10 ثواني وقت إضافي (تقدر تغيرها لـ 5 لو عايز صعوبة أكتر)
+            gs->maze[ny][nx] = 0; // تحويل مكان الجائزة لطريق فاضي
+            update_ui_label(gs);  // تحديث العداد في واجهة المستخدم فوراً
         }
-        gs->px = nx; gs->py = ny;
-        if (gs->maze[ny][nx] == 2) gs->status = STATE_WIN;
+        
+        gs->px = nx; 
+        gs->py = ny;
+
+        // التحقق من الوصول لخط النهاية (رقم 2)
+        if (gs->maze[ny][nx] == 2) {
+            gs->status = STATE_WIN;
+        }
+
+        // إعادة رسم الخريطة لتحديث مكان اللاعب
         gtk_widget_queue_draw(gs->drawing_area);
     }
     return TRUE;
