@@ -1,8 +1,12 @@
 [Desktop Entry]
+Version=1.0
 Type=Application
-Name=Helwan Maze (SMA)
-Comment=Professional Maze Game by سعيد بدر الدين
-Exec=/path/to/your/compiled/maze_pro  # <-- غير المسار ده لمكان ملفك الشغال
-Icon=helwan-maze  # <-- ده اسم ملف الأيقونة اللي لسه ناقلينه
-Categories=Game;Arcade;
+Name=Helwan Linux Maze
+GenericName=Maze Game
+Comment=Educational Maze Game by SMA Coding
+Exec=/usr/bin/hel-maze
+Icon=helwan-maze
 Terminal=false
+Categories=Game;Arcade;Education;
+Keywords=maze;helwan;sma;coding;
+StartupNotify=true
