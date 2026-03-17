@@ -69,7 +69,7 @@ void init_game(GameState *gs) {
     }
     gs->maze[ROWS-2][COLS-2] = 2; 
     gs->px = 1; gs->py = 1;
-    gs->time_left = 30;
+    gs->time_left = 60;
     gs->score = 0;
     gs->status = STATE_PLAYING;
 }
