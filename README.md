@@ -1,4 +1,4 @@
-# Helwan Linux Maze (Pro Edition) 🎮
+# Helwan Linux Maze  🎮
 
 **Helwan Linux Maze** is a fast-paced, terminal-inspired graphical puzzle game built with C and GTK-3.0. Originally developed by Saeed Badreldin, it serves as the official built-in game for Helwan Linux, an Arch-based distribution designed for education and development.
 
