@@ -1,8 +1,8 @@
 /*
- * SMA CODING - Helwan Linux Maze (Ultimate Edition V2.7 Extended)
+ * SMA CODING - Helwan Linux Maze (Ultimate Edition V1.0 Extended)
  * Developer: Saeed Badreldin
  * OS: Helwan Linux
- * Features: Dual AI, Bomb System (Lvl 8+), BFS Smart AI, Traps, Fog of War.
+ * Features: Dual AI, Bomb System (Lvl 8+), BFS Smart AI, Traps, Fog of War, Map Revealer.
  */
 
 #include <gtk/gtk.h>
@@ -39,6 +39,9 @@ typedef struct {
     int bx, by;               // Active Bomb Position
     int b_active;             // Bomb State (bool)
     int b_timer;              // Explosion Countdown
+    int reveal_timer;         // Map Reveal Timer
+    int is_revealed;          // Map Reveal State
+    int fog_delay;            // عداد تأخير الضباب (3 ثواني) - مضاف جديد
     GameStatus status;        
     GtkWidget *window;
     GtkWidget *drawing_area;  
@@ -138,7 +141,7 @@ void show_help(GtkWidget *widget, gpointer data) {
         "• Movement: Arrow Keys.\n"
         "• Enemies: Red (Basic) & Orange (Lvl 5+ Master).\n"
         "• Bombs (Lvl 8+): Press [SPACE] to plant. Destroys walls 3x3!\n"
-        "• Fog: Dark vision system enabled.");
+        "• Bonus: Cyan item reveals everything for 10 seconds!");
     gtk_window_set_title(GTK_WINDOW(dialog), "Manual");
     gtk_dialog_run(GTK_DIALOG(dialog));
     gtk_widget_destroy(dialog);
@@ -147,7 +150,7 @@ void show_help(GtkWidget *widget, gpointer data) {
 void show_about(GtkWidget *widget, gpointer data) {
     GtkWidget *dialog = gtk_about_dialog_new();
     GdkPixbuf *logo = gdk_pixbuf_new_from_file("helwan-maze.png", NULL);
-	gtk_about_dialog_set_logo(GTK_ABOUT_DIALOG(dialog), logo);
+    gtk_about_dialog_set_logo(GTK_ABOUT_DIALOG(dialog), logo);
     gtk_about_dialog_set_program_name(GTK_ABOUT_DIALOG(dialog), "Helwan Linux Maze");
     gtk_about_dialog_set_version(GTK_ABOUT_DIALOG(dialog), "1.0 Extended");
     gtk_about_dialog_set_copyright(GTK_ABOUT_DIALOG(dialog), "© 2026 Saeed Badreldin");
@@ -160,8 +163,12 @@ void show_about(GtkWidget *widget, gpointer data) {
 // --- UI Updates ---
 void update_ui_label(GameState *gs) {
     char info[256];
-    sprintf(info, " 🕒 %ds | ⭐ %d | 🏆 Best: %d | 🛡️ Lvl: %d | 💣 %d", 
-            gs->time_left, gs->score, gs->high_score, gs->level, gs->bombs_count);
+    char reveal_status[64] = "";
+    if (gs->is_revealed) {
+        sprintf(reveal_status, " | 👁️ REVEAL: %ds", gs->reveal_timer);
+    }
+    sprintf(info, " 🕒 %ds | ⭐ %d | 🏆 Best: %d | 🛡️ Lvl: %d | 💣 %d%s", 
+            gs->time_left, gs->score, gs->high_score, gs->level, gs->bombs_count, reveal_status);
     gtk_label_set_text(GTK_LABEL(gs->status_label), info);
 }
 
@@ -211,6 +218,14 @@ void init_game(GameState *gs) {
             items++; 
         }
     }
+
+    // Spawn Revealer Bonus (مضمون 100% في كل دور)
+    int br, bc;
+    do {
+        br = rand() % ROWS;
+        bc = rand() % COLS;
+    } while (gs->maze[br][bc] != 0);
+    gs->maze[br][bc] = 5; 
     
     gs->maze[ROWS-2][COLS-2] = 2; // Exit
     gs->px = 1; 
@@ -220,6 +235,9 @@ void init_game(GameState *gs) {
     gs->sx = 1; 
     gs->sy = ROWS-2; 
     gs->b_active = 0;
+    gs->is_revealed = 0;
+    gs->reveal_timer = 0;
+    gs->fog_delay = 3; // تهيئة الـ 3 ثواني تأخير للضباب
 
     if (gs->level <= 1) {
         gs->level = 1;
@@ -245,10 +263,12 @@ static gboolean on_draw(GtkWidget *widget, cairo_t *cr, gpointer data) {
     cairo_set_source_rgb(cr, 0, 0, 0);
     cairo_paint(cr);
     
-    // Fog of War Mask
-    cairo_save(cr);
-    cairo_arc(cr, gs->px * TILE_SIZE + TILE_SIZE/2, gs->py * TILE_SIZE + TILE_SIZE/2, TILE_SIZE * 3.5, 0, 2 * G_PI);
-    cairo_clip(cr); 
+    // Fog of War Mask: يعمل فقط لو انتهى الـ fog_delay ولو مفيش مكافأة كشف مفعلة
+    if (gs->fog_delay <= 0 && !gs->is_revealed) {
+        cairo_save(cr);
+        cairo_arc(cr, gs->px * TILE_SIZE + TILE_SIZE/2, gs->py * TILE_SIZE + TILE_SIZE/2, TILE_SIZE * 3.5, 0, 2 * G_PI);
+        cairo_clip(cr); 
+    }
 
     for (int r = 0; r < ROWS; r++) {
         for (int c = 0; c < COLS; c++) {
@@ -260,6 +280,8 @@ static gboolean on_draw(GtkWidget *widget, cairo_t *cr, gpointer data) {
                 cairo_set_source_rgb(cr, 1.0, 0.8, 0.0); 
             } else if (gs->maze[r][c] == 4) {
                 cairo_set_source_rgb(cr, 0.5, 0.0, 0.5); 
+            } else if (gs->maze[r][c] == 5) {
+                cairo_set_source_rgb(cr, 0.0, 1.0, 1.0); // Cyan Bonus Color
             } else {
                 cairo_set_source_rgb(cr, 0.2, 0.2, 0.25); 
             }
@@ -267,7 +289,10 @@ static gboolean on_draw(GtkWidget *widget, cairo_t *cr, gpointer data) {
             cairo_fill(cr);
         }
     }
-    cairo_restore(cr);
+
+    if (gs->fog_delay <= 0 && !gs->is_revealed) {
+        cairo_restore(cr);
+    }
 
     // Render Bomb
     if (gs->b_active) {
@@ -361,6 +386,11 @@ static gboolean on_key_press(GtkWidget *widget, GdkEventKey *event, gpointer dat
             gs->time_left -= 5; 
             gs->maze[ny][nx] = 0; 
             play_sound(2);
+        } else if (gs->maze[ny][nx] == 5) {
+            gs->is_revealed = 1;
+            gs->reveal_timer = 10;
+            gs->maze[ny][nx] = 0;
+            play_sound(1);
         }
         
         gs->px = nx; 
@@ -394,6 +424,16 @@ static gboolean update_game_logic(gpointer data) {
         gs->status = STATE_LOSE; 
         save_high_score(gs); 
         play_sound(2); 
+    }
+
+    // Fog Delay (New Logic for 3s delay)
+    if (gs->fog_delay > 0) {
+        gs->fog_delay--;
+    }
+
+    // Map Reveal Timer
+    if (gs->is_revealed && --gs->reveal_timer <= 0) {
+        gs->is_revealed = 0;
     }
 
     // Bomb Management
@@ -450,7 +490,7 @@ int main(int argc, char *argv[]) {
 
     gs->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_icon_from_file(GTK_WINDOW(gs->window), "helwan-maze.png", NULL);
-    gtk_window_set_title(GTK_WINDOW(gs->window), "Helwan Linux Maze - Ultimate 2.7");
+    gtk_window_set_title(GTK_WINDOW(gs->window), "Helwan Linux Maze - Ultimate 1.0");
     gtk_window_set_resizable(GTK_WINDOW(gs->window), FALSE);
     g_signal_connect(gs->window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
 
