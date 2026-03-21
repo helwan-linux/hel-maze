@@ -3,8 +3,8 @@
 
 pkgname=hel-maze
 pkgver=1.0
-pkgrel=4
-pkgdesc="لعبة متاهة تعليمية رسمية لتوزيعة Helwan Linux"
+pkgrel=5 # رفعنا الإصدار بسبب إضافة نظام الديمو
+pkgdesc="لعبة متاهة تعليمية رسمية لتوزيعة Helwan Linux مع نظام عرض تلقائي"
 arch=('x86_64')
 url="https://github.com/helwan-linux/hel-maze"
 license=('GPL')
@@ -15,7 +15,7 @@ sha256sums=('SKIP')
 
 build() {
   cd "$srcdir/hel-maze/maze"
-  # بناء البرنامج مباشرة
+  # بناء البرنامج مباشرة - الـ gcc سيتعرف على demo.h تلقائياً لوجوده في نفس المجلد
   gcc main.c -o hel-maze $(pkg-config --cflags --libs gtk+-3.0)
 }
 
@@ -32,8 +32,6 @@ package() {
   install -Dm644 helwan-maze.desktop "$pkgdir/usr/share/applications/helwan-maze.desktop"
 }
 
-# --- الجزء السحري: تحديث النظام تلقائياً بعد التثبيت ---
-# الأسطر دي بتخلي pacman يحدّث القوائم والأيقونات فوراً بمجرد انتهاء التثبيت
 post_install() {
   update-desktop-database -q
   gtk-update-icon-cache -q -t -f usr/share/icons/hicolor
