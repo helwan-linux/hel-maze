@@ -10,6 +10,7 @@
 #include <time.h>
 #include <stdio.h>
 
+
 #define TILE_SIZE 30
 #define ROWS 21 
 #define COLS 21
@@ -48,6 +49,8 @@ typedef struct {
     GtkWidget *status_label;  
     guint timer_id;           
 } GameState;
+
+#include "demo.h"
 
 // --- Sound Module (System Integrated) ---
 void play_sound(int type) {
@@ -249,7 +252,7 @@ void init_game(GameState *gs) {
         gs->bombs_count = 3;
     }
 
-    gs->time_left = 35 - (gs->level * 2);
+    gs->time_left = 60 - (gs->level * 2);
     if (gs->time_left < 10) gs->time_left = 10; 
     
     gs->status = STATE_PLAYING;
@@ -339,6 +342,18 @@ static gboolean on_draw(GtkWidget *widget, cairo_t *cr, gpointer data) {
 static gboolean on_key_press(GtkWidget *widget, GdkEventKey *event, gpointer data) {
     GameState *gs = (GameState *)data;
     
+    // عند ضغط Escape: يتم إنهاء وضع الديمو وبدء لعبة جديدة تماماً للاعب
+    if (event->keyval == GDK_KEY_Escape) {
+        if (is_demo_active) {
+            is_demo_active = 0;    // إيقاف المحاكي
+            gs->level = 1;         // العودة للمستوى الأول
+            gs->score = 0;         // تصفير النقاط
+            init_game(gs);         // توليد متاهة جديدة وتصفير الأعداء
+            gtk_widget_queue_draw(gs->drawing_area); // تحديث الشاشة
+        }
+        return TRUE; 
+    }
+    
     if (gs->status != STATE_PLAYING) {
         if (event->keyval == GDK_KEY_Return || event->keyval == GDK_KEY_KP_Enter) {
             if (gs->status == STATE_WIN) { 
@@ -418,6 +433,8 @@ static gboolean on_key_press(GtkWidget *widget, GdkEventKey *event, gpointer dat
 static gboolean update_game_logic(gpointer data) {
     GameState *gs = (GameState *)data;
     if (gs->status != STATE_PLAYING) return TRUE;
+    
+    if (is_demo_active) run_demo_logic(gs);
 
     // Time Management
     if (--gs->time_left <= 0) { 
@@ -517,6 +534,12 @@ int main(int argc, char *argv[]) {
     gs->status_label = gtk_label_new("");
     update_ui_label(gs);
     gtk_box_pack_start(GTK_BOX(vbox), gs->status_label, FALSE, FALSE, 10);
+	
+	// --- Add Demo Button below status_label ---
+	GtkWidget *demo_btn = gtk_button_new_with_label("Start Auto Demo");
+	g_signal_connect(demo_btn, "clicked", G_CALLBACK(on_demo_button_clicked), gs);
+	gtk_box_pack_start(GTK_BOX(vbox), demo_btn, FALSE, FALSE, 5);
+
 
     // Drawing Canvas
     gs->drawing_area = gtk_drawing_area_new();
